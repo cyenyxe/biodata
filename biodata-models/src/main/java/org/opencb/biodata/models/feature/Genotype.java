@@ -14,10 +14,14 @@ public class Genotype {
     
     private String reference;
     private String alternate;
-    private int[] allelesIdx;
     private boolean phased;
     
-    private AllelesCode code;
+    private int[] allelesIdx;
+    
+    private boolean alleleMissing;
+    private boolean multipleAlternates;
+    
+//    private AllelesCode code;
     
     private int count;
     protected static final Pattern genotypePattern = Pattern.compile("/|\\|");
@@ -34,22 +38,24 @@ public class Genotype {
         this.reference = ref;
         this.alternate = alt;
         this.phased = genotype.contains("|");
+        this.alleleMissing = genotype.contains(".");
+        this.multipleAlternates = false;
         this.count = 0;
         parseGenotype(genotype);
     }
     
-    
     private void parseGenotype(String genotype) {
         String[] alleles = genotypePattern.split(genotype, -1);
 
-        this.code = alleles.length > 1 ? AllelesCode.ALLELES_OK : AllelesCode.HAPLOID;
+//        this.code = alleles.length > 1 ? AllelesCode.ALLELES_OK : AllelesCode.HAPLOID;
         this.allelesIdx = new int[alleles.length];
         
         for (int i = 0; i < alleles.length; i++) {
             String allele = alleles[i];
             
             if (allele.equals(".") || allele.equals("-1")) {
-                this.code = AllelesCode.ALLELES_MISSING;
+//                this.code = AllelesCode.ALLELES_MISSING;
+                this.alleleMissing = true;
                 this.allelesIdx[i] = -1;
             } else {
                 if (StringUtils.isNumeric(allele)) { // Accepts genotypes with form 0/0, 0/1, and so on
@@ -69,7 +75,8 @@ public class Genotype {
                 }
                 
                 if (allelesIdx[i] > 1) {
-                    this.code = AllelesCode.MULTIPLE_ALTERNATES;
+                    this.multipleAlternates = true;
+//                    this.code = AllelesCode.MULTIPLE_ALTERNATES;
                 }
             }
         }
@@ -79,17 +86,17 @@ public class Genotype {
         return reference;
     }
 
-    void setReference(String reference) {
-        this.reference = reference;
-    }
+//    void setReference(String reference) {
+//        this.reference = reference;
+//    }
 
     public String getAlternate() {
         return alternate;
     }
     
-    void setAlternate(String alternate) {
-        this.alternate = alternate;
-    }
+//    void setAlternate(String alternate) {
+//        this.alternate = alternate;
+//    }
 
     public int getAllele(int i) {
         return allelesIdx[i];
@@ -109,6 +116,10 @@ public class Genotype {
         this.allelesIdx = allelesIdx;
     }
 
+    public int getPloidy() {
+        return allelesIdx.length;
+    }
+    
     public boolean isAlleleRef(int i) {
         return allelesIdx[i] == 0;
     }
@@ -121,13 +132,21 @@ public class Genotype {
         this.phased = phased;
     }
 
-    public AllelesCode getCode() {
-        return code;
+    public boolean isAlleleMissing() {
+        return alleleMissing;
     }
 
-    void setCode(AllelesCode code) {
-        this.code = code;
+    public boolean isMultipleAlternates() {
+        return multipleAlternates;
     }
+
+//    public AllelesCode getCode() {
+//        return code;
+//    }
+//
+//    void setCode(AllelesCode code) {
+//        this.code = code;
+//    }
 
     public Integer getCount() {
         return count;

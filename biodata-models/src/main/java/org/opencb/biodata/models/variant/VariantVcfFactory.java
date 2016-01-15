@@ -250,36 +250,53 @@ public class VariantVcfFactory implements VariantFactory {
                 } else if (formatField.equalsIgnoreCase("GL")
                         || formatField.equalsIgnoreCase("PL")
                         || formatField.equalsIgnoreCase("GP")) {
-                    // All-alleles present and not haploid
-                    if (!sampleField.equals(".") && genotype != null
-                            && (genotype.getCode() == AllelesCode.ALLELES_OK
-                            || genotype.getCode() == AllelesCode.MULTIPLE_ALTERNATES)) {
+//                    // All-alleles present and not haploid
+//                    if (!sampleField.equals(".") && genotype != null
+//                            && (genotype.getCode() == AllelesCode.ALLELES_OK
+//                            || genotype.getCode() == AllelesCode.MULTIPLE_ALTERNATES)) {
+                    
+                    // All-alleles present
+                    if (genotype != null && !genotype.isAlleleMissing()) {
                         String[] likelihoods = sampleField.split(",");
 
-                        // If only 3 likelihoods are represented, no transformation is needed
-                        if (likelihoods.length > 3) {
-                            // Get alleles index to work with: if both are the same alternate,
-                            // the combinations must be run with the reference allele.
-                            // Otherwise all GL reported would be alt/alt.
-                            int allele1 = genotype.getAllele(0);
-                            int allele2 = genotype.getAllele(1);
-                            if (genotype.getAllele(0) == genotype.getAllele(1) && genotype.getAllele(0) > 0) {
-                                allele1 = 0;
+                        if (genotype.getPloidy() == 1) {
+                            // Haploid can have at most the number of alternates
+                            if (likelihoods.length > alternateAlleles.length) {
+                                throw new NonStandardCompliantSampleField(formatField, sampleField, String.format(
+                                        "For haploid samples it can't contain more than %d values", alternateAlleles.length+1));
                             }
-
-                            // If the number of values is not enough for this GT
-                            int maxAllele = allele1 >= allele2 ? allele1 : allele2;
-                            int numValues = (int) (((float) maxAllele * (maxAllele + 1)) / 2) + maxAllele;
-                            if (likelihoods.length < numValues) {
-                                throw new NonStandardCompliantSampleField(formatField, sampleField, String.format("It must contain %d values", numValues));
-                            }
-
+                            
                             // Genotype likelihood must be distributed following similar criteria as genotypes
-                            String[] alleleLikelihoods = new String[3];
-                            alleleLikelihoods[0] = likelihoods[(int) (((float) allele1 * (allele1 + 1)) / 2) + allele1];
-                            alleleLikelihoods[1] = likelihoods[(int) (((float) allele2 * (allele2 + 1)) / 2) + allele1];
-                            alleleLikelihoods[2] = likelihoods[(int) (((float) allele2 * (allele2 + 1)) / 2) + allele2];
+                            String[] alleleLikelihoods = new String[2];
+                            alleleLikelihoods[0] = likelihoods[0];
+                            alleleLikelihoods[1] = likelihoods[genotype.getAllele(0)];
                             sampleField = StringUtils.join(alleleLikelihoods, ",");
+                        } else {
+                            // If only 3 likelihoods are represented, no transformation is needed
+                            if (likelihoods.length > 3) {
+                                // Get alleles index to work with: if both are the same alternate,
+                                // the combinations must be run with the reference allele.
+                                // Otherwise all GL reported would be alt/alt.
+                                int allele1 = genotype.getAllele(0);
+                                int allele2 = genotype.getAllele(1);
+                                if (genotype.getAllele(0) == genotype.getAllele(1) && genotype.getAllele(0) > 0) {
+                                    allele1 = 0;
+                                }
+
+                                // If the number of values is not enough for this GT
+                                int maxAllele = allele1 >= allele2 ? allele1 : allele2;
+                                int numValues = (int) (((float) maxAllele * (maxAllele + 1)) / 2) + maxAllele;
+                                if (likelihoods.length < numValues) {
+                                    throw new NonStandardCompliantSampleField(formatField, sampleField, String.format("It must contain %d values", numValues));
+                                }
+
+                                // Genotype likelihood must be distributed following similar criteria as genotypes
+                                String[] alleleLikelihoods = new String[3];
+                                alleleLikelihoods[0] = likelihoods[(int) (((float) allele1 * (allele1 + 1)) / 2) + allele1];
+                                alleleLikelihoods[1] = likelihoods[(int) (((float) allele2 * (allele2 + 1)) / 2) + allele1];
+                                alleleLikelihoods[2] = likelihoods[(int) (((float) allele2 * (allele2 + 1)) / 2) + allele2];
+                                sampleField = StringUtils.join(alleleLikelihoods, ",");
+                            }
                         }
                     }
                 }
